@@ -1,2 +1,1 @@
-# terraform-provider-alicloudextend
-Terraform Provider For Alicloud Extend
+# Terraform Provider For AliCloud Extend 
