@@ -162,13 +162,13 @@ func (d *EsaRatePlanInstancesDataSource) Read(ctx context.Context, req datasourc
 	}
 
 	// Paginate through all results.
+	// PlanNameEn and PlanType are not supported as API-side filters (causes InvalidParameter);
+	// fetch all matching status/quota results and filter client-side.
 	var allInstances []*esaclient.ListUserRatePlanInstancesResponseBodyInstanceInfo
 	pageNum := int32(1)
 	pageSize := int32(100)
 	for {
 		listReq := &esaclient.ListUserRatePlanInstancesRequest{
-			PlanNameEn:              strPtr(planNameEn),
-			PlanType:                strPtr(planType),
 			Status:                  strPtr(status),
 			CheckRemainingSiteQuota: strPtr(checkQuotaStr),
 			PageNumber:              &pageNum,
@@ -194,9 +194,15 @@ func (d *EsaRatePlanInstancesDataSource) Read(ctx context.Context, req datasourc
 		pageNum++
 	}
 
-	// Map to state model.
+	// Map to state model, applying client-side plan_name_en / plan_type filters.
 	instances := make([]EsaRatePlanInstanceModel, 0, len(allInstances))
 	for _, inst := range allInstances {
+		if planNameEn != "" && inst.PlanName != nil && *inst.PlanName != planNameEn {
+			continue
+		}
+		if planType != "" && inst.PlanType != nil && *inst.PlanType != planType {
+			continue
+		}
 		instances = append(instances, EsaRatePlanInstanceModel{
 			InstanceId: types.StringPointerValue(inst.InstanceId),
 			PlanName:   types.StringPointerValue(inst.PlanName),
