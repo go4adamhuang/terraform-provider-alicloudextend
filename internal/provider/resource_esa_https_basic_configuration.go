@@ -3,7 +3,10 @@ package provider
 import (
 	"context"
 	"fmt"
+	"math/rand"
 	"strconv"
+	"strings"
+	"time"
 
 	openapiutil "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	esaclient "github.com/alibabacloud-go/esa-20240910/v2/client"
@@ -78,6 +81,22 @@ func (r *EsaHttpsBasicConfigurationResource) newESAClient() (*esaclient.Client, 
 	})
 }
 
+func retryOnLockFailed(fn func() error) error {
+	const maxAttempts = 5
+	wait := 2 * time.Second
+	var err error
+	for i := 0; i < maxAttempts; i++ {
+		err = fn()
+		if err == nil || !strings.Contains(err.Error(), "LockFailed") {
+			return err
+		}
+		jitter := time.Duration(rand.Intn(3)) * time.Second
+		time.Sleep(wait + jitter)
+		wait *= 2
+	}
+	return err
+}
+
 func (r *EsaHttpsBasicConfigurationResource) listGlobalConfig(esa *esaclient.Client, siteId int64) ([]*esaclient.ListHttpsBasicConfigurationsResponseBodyConfigs, error) {
 	configType := "global"
 	listResp, err := esa.ListHttpsBasicConfigurations(&esaclient.ListHttpsBasicConfigurationsRequest{
@@ -127,19 +146,27 @@ func (r *EsaHttpsBasicConfigurationResource) Create(ctx context.Context, req res
 	if len(configs) > 0 {
 		// Upsert: singleton already exists, update it.
 		configId = *configs[0].ConfigId
-		_, err = esa.UpdateHttpsBasicConfiguration(&esaclient.UpdateHttpsBasicConfigurationRequest{
-			SiteId:   &siteId,
-			ConfigId: &configId,
-			Http2:    strPtr(http2),
+		err = retryOnLockFailed(func() error {
+			_, e := esa.UpdateHttpsBasicConfiguration(&esaclient.UpdateHttpsBasicConfigurationRequest{
+				SiteId:   &siteId,
+				ConfigId: &configId,
+				Http2:    strPtr(http2),
+			})
+			return e
 		})
 		if err != nil {
 			resp.Diagnostics.AddError("Failed to update HTTPS basic configuration", err.Error())
 			return
 		}
 	} else {
-		createResp, err := esa.CreateHttpsBasicConfiguration(&esaclient.CreateHttpsBasicConfigurationRequest{
-			SiteId: &siteId,
-			Http2:  strPtr(http2),
+		var createResp *esaclient.CreateHttpsBasicConfigurationResponse
+		err = retryOnLockFailed(func() error {
+			var e error
+			createResp, e = esa.CreateHttpsBasicConfiguration(&esaclient.CreateHttpsBasicConfigurationRequest{
+				SiteId: &siteId,
+				Http2:  strPtr(http2),
+			})
+			return e
 		})
 		if err != nil {
 			resp.Diagnostics.AddError("Failed to create HTTPS basic configuration", err.Error())
@@ -218,10 +245,13 @@ func (r *EsaHttpsBasicConfigurationResource) Update(ctx context.Context, req res
 	}
 
 	http2 := plan.Http2.ValueString()
-	_, err = esa.UpdateHttpsBasicConfiguration(&esaclient.UpdateHttpsBasicConfigurationRequest{
-		SiteId:   &siteId,
-		ConfigId: &configId,
-		Http2:    strPtr(http2),
+	err = retryOnLockFailed(func() error {
+		_, e := esa.UpdateHttpsBasicConfiguration(&esaclient.UpdateHttpsBasicConfigurationRequest{
+			SiteId:   &siteId,
+			ConfigId: &configId,
+			Http2:    strPtr(http2),
+		})
+		return e
 	})
 	if err != nil {
 		resp.Diagnostics.AddError("Failed to update HTTPS basic configuration", err.Error())
