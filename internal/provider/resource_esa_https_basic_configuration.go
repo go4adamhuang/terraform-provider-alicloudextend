@@ -7,6 +7,7 @@ import (
 
 	openapiutil "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	esaclient "github.com/alibabacloud-go/esa-20240910/v2/client"
+	"github.com/hashicorp/terraform-plugin-framework/path"
 	"github.com/hashicorp/terraform-plugin-framework/resource"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema"
 	"github.com/hashicorp/terraform-plugin-framework/resource/schema/planmodifier"
@@ -233,4 +234,8 @@ func (r *EsaHttpsBasicConfigurationResource) Update(ctx context.Context, req res
 
 func (r *EsaHttpsBasicConfigurationResource) Delete(_ context.Context, _ resource.DeleteRequest, _ *resource.DeleteResponse) {
 	// no-op: ESA singleton configuration cannot be deleted; it lives with the site.
+}
+
+func (r *EsaHttpsBasicConfigurationResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
+	resource.ImportStatePassthroughID(ctx, path.Root("site_id"), req, resp)
 }
