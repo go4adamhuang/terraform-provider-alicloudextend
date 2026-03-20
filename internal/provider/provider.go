@@ -124,7 +124,9 @@ func (p *AliCloudProvider) Configure(ctx context.Context, req provider.Configure
 }
 
 func (p *AliCloudProvider) Resources(_ context.Context) []func() resource.Resource {
-	return []func() resource.Resource{}
+	return []func() resource.Resource{
+		NewEsaHttpsBasicConfigurationResource,
+	}
 }
 
 func (p *AliCloudProvider) DataSources(_ context.Context) []func() datasource.DataSource {

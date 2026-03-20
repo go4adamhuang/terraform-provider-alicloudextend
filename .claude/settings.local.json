@@ -8,7 +8,12 @@
       "WebFetch(domain:github.com)",
       "WebFetch(domain:raw.githubusercontent.com)",
       "WebFetch(domain:next.api.aliyun.com)",
-      "Bash(go get:*)"
+      "Bash(go get:*)",
+      "Bash(make build:*)",
+      "Bash(make docs:*)",
+      "Bash(go install:*)",
+      "Read(//Users/adam.huang/go/bin/**)",
+      "Bash(~/go/bin/tfplugindocs generate --provider-name alicloudextend)"
     ]
   }
 }
