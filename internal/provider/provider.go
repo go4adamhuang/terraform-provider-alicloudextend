@@ -132,6 +132,7 @@ func (p *AliCloudProvider) Resources(_ context.Context) []func() resource.Resour
 func (p *AliCloudProvider) DataSources(_ context.Context) []func() datasource.DataSource {
 	return []func() datasource.DataSource{
 		NewEsaRatePlanInstancesDataSource,
+		NewEsaSitesDataSource,
 	}
 }
 
