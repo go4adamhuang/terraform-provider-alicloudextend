@@ -54,7 +54,7 @@ func (d *EsaRatePlanInstancesDataSource) Schema(_ context.Context, _ datasource.
 			},
 			"plan_type": schema.StringAttribute{
 				Optional:    true,
-				Description: "Filter by plan type (e.g. high, normal, enterprise). Defaults to \"high\".",
+				Description: "Filter by plan type. Valid values: normal, enterprise. Leave unset to return all types.",
 			},
 			"status": schema.StringAttribute{
 				Optional:    true,
@@ -144,7 +144,7 @@ func (d *EsaRatePlanInstancesDataSource) Read(ctx context.Context, req datasourc
 	if !state.PlanNameEn.IsNull() && state.PlanNameEn.ValueString() != "" {
 		planNameEn = state.PlanNameEn.ValueString()
 	}
-	planType := "high"
+	planType := ""
 	if !state.PlanType.IsNull() && state.PlanType.ValueString() != "" {
 		planType = state.PlanType.ValueString()
 	}
@@ -223,7 +223,9 @@ func (d *EsaRatePlanInstancesDataSource) Read(ctx context.Context, req datasourc
 
 	// Persist resolved defaults back to state for plan stability.
 	state.PlanNameEn = types.StringValue(planNameEn)
-	state.PlanType = types.StringValue(planType)
+	if planType != "" {
+		state.PlanType = types.StringValue(planType)
+	}
 	state.Status = types.StringValue(status)
 	state.CheckRemainingSiteQuota = types.BoolValue(checkQuota)
 
