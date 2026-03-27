@@ -5,7 +5,7 @@ description: |-
   Retrieves the TXT record verification content for an ApsaraVideo Live domain. Add this content as a DNS TXT record under `_dnsauth.<domain>` before creating the live domain resource.
 ---
 
-# alicloudextend_live_domain_verify_content (Data Source)
+# alicloudextend_live_domain_verify_content
 
 Retrieves the TXT record verification content for an ApsaraVideo Live domain. Add this content as a DNS TXT record under `_dnsauth.<domain>` before creating the live domain resource.
 

@@ -5,7 +5,7 @@ description: |-
   Manages a single HTTP response header for an ApsaraVideo Live domain. Each resource represents one header key-value pair. Multiple resources can be created for the same domain to manage different headers independently.
 ---
 
-# alicloudextend_live_domain_http_header (Resource)
+# alicloudextend_live_domain_http_header
 
 Manages a single HTTP response header for an ApsaraVideo Live domain. Each resource represents one header key-value pair. Multiple resources can be created for the same domain to manage different headers independently.
 

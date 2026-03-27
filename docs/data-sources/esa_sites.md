@@ -5,7 +5,7 @@ description: |-
   Lists all ESA sites under the account.
 ---
 
-# alicloudextend_esa_sites (Data Source)
+# alicloudextend_esa_sites
 
 Lists all ESA sites under the account.
 

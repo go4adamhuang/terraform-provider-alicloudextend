@@ -5,7 +5,7 @@ description: |-
   Manages the protocol blocking (access control) settings for an ApsaraVideo Live domain. Allows blocking RTMP and/or HLS playback protocols.
 ---
 
-# alicloudextend_live_domain_access_control (Resource)
+# alicloudextend_live_domain_access_control
 
 Manages the protocol blocking (access control) settings for an ApsaraVideo Live domain. Allows blocking RTMP and/or HLS playback protocols.
 

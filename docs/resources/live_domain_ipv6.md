@@ -5,7 +5,7 @@ description: |-
   Manages the IPv6 configuration for an ApsaraVideo Live domain.
 ---
 
-# alicloudextend_live_domain_ipv6 (Resource)
+# alicloudextend_live_domain_ipv6
 
 Manages the IPv6 configuration for an ApsaraVideo Live domain.
 

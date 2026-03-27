@@ -7,7 +7,7 @@ description: |-
 Before creating, add the DNS TXT record from `alicloudextend_live_domain_verify_content` to prove domain ownership.
 ---
 
-# alicloudextend_live_domain (Resource)
+# alicloudextend_live_domain
 
 Manages an ApsaraVideo Live domain (ingest or streaming). Aligns with the official alicloud_live_domain resource and extends it by waiting for the domain to reach 'online' status so that the CNAME value is available for use in downstream resources.
 

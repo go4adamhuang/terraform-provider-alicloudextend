@@ -5,7 +5,7 @@ description: |-
   Manages the HTTPS certificate and HTTP/2 configuration for an ApsaraVideo Live domain.
 ---
 
-# alicloudextend_live_domain_certificate (Resource)
+# alicloudextend_live_domain_certificate
 
 Manages the HTTPS certificate and HTTP/2 configuration for an ApsaraVideo Live domain.
 

@@ -5,7 +5,7 @@ description: |-
   Lists ESA rate plan instances. Returns the first matching instance_id for easy use in other resources.
 ---
 
-# alicloudextend_esa_rate_plan_instances (Data Source)
+# alicloudextend_esa_rate_plan_instances
 
 Lists ESA rate plan instances. Returns the first matching instance_id for easy use in other resources.
 

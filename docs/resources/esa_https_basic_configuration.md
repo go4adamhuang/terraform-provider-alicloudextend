@@ -5,7 +5,7 @@ description: |-
   Manages ESA HTTPS basic configuration for a site. Uses upsert semantics on Create to handle the singleton configuration that is auto-created with each site, avoiding ConfExceedLimit errors.
 ---
 
-# alicloudextend_esa_https_basic_configuration (Resource)
+# alicloudextend_esa_https_basic_configuration
 
 Manages ESA HTTPS basic configuration for a site. Uses upsert semantics on Create to handle the singleton configuration that is auto-created with each site, avoiding ConfExceedLimit errors.
 
