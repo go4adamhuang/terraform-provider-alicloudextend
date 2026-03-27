@@ -126,6 +126,7 @@ func (p *AliCloudProvider) Configure(ctx context.Context, req provider.Configure
 func (p *AliCloudProvider) Resources(_ context.Context) []func() resource.Resource {
 	return []func() resource.Resource{
 		NewEsaHttpsBasicConfigurationResource,
+		NewLiveDomainResource,
 	}
 }
 
@@ -133,6 +134,7 @@ func (p *AliCloudProvider) DataSources(_ context.Context) []func() datasource.Da
 	return []func() datasource.DataSource{
 		NewEsaRatePlanInstancesDataSource,
 		NewEsaSitesDataSource,
+		NewLiveDomainVerifyContentDataSource,
 	}
 }
 

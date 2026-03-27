@@ -5,6 +5,7 @@ go 1.22.0
 require (
 	github.com/alibabacloud-go/darabonba-openapi/v2 v2.1.15
 	github.com/alibabacloud-go/esa-20240910/v2 v2.48.0
+	github.com/alibabacloud-go/live-20161101/v2 v2.7.1
 	github.com/hashicorp/terraform-plugin-framework v1.13.0
 )
 

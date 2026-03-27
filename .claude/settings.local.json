@@ -13,7 +13,11 @@
       "Bash(make docs:*)",
       "Bash(go install:*)",
       "Read(//Users/adam.huang/go/bin/**)",
-      "Bash(~/go/bin/tfplugindocs generate --provider-name alicloudextend)"
+      "Bash(~/go/bin/tfplugindocs generate --provider-name alicloudextend)",
+      "WebSearch",
+      "WebFetch(domain:api.aliyun.com)",
+      "WebFetch(domain:www.alibabacloud.com)",
+      "Bash(make tidy:*)"
     ]
   }
 }

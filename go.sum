@@ -26,6 +26,8 @@ github.com/alibabacloud-go/endpoint-util v1.1.0 h1:r/4D3VSw888XGaeNpP994zDUaxdgT
 github.com/alibabacloud-go/endpoint-util v1.1.0/go.mod h1:O5FuCALmCKs2Ff7JFJMudHs0I5EBgecXXxZRyswlEjE=
 github.com/alibabacloud-go/esa-20240910/v2 v2.48.0 h1:SdtLjxay5rzshlp56bvHFSqWuKwi+rkhCfla4cRuDVU=
 github.com/alibabacloud-go/esa-20240910/v2 v2.48.0/go.mod h1:uSzaHIUBmr4WoixyRnc8uEuzSqxy/HQ4F8iu4RAzvHQ=
+github.com/alibabacloud-go/live-20161101/v2 v2.7.1 h1:ZzT8bNXS/7xtiMyRti+YKg1uBo4suvVUAEI2Us0Kv9Q=
+github.com/alibabacloud-go/live-20161101/v2 v2.7.1/go.mod h1:qxfUve//bC417KCsRvyou8U2Bpbflj0fRjw51oYc+2Y=
 github.com/alibabacloud-go/openapi-util v0.1.0 h1:0z75cIULkDrdEhkLWgi9tnLe+KhAFE/r5Pb3312/eAY=
 github.com/alibabacloud-go/openapi-util v0.1.0/go.mod h1:sQuElr4ywwFRlCCberQwKRFhRzIyG4QTP/P4y1CJ6Ws=
 github.com/alibabacloud-go/tea v1.1.0/go.mod h1:IkGyUSX4Ba1V+k4pCtJUc6jDpZLFph9QMy2VUPTwukg=
