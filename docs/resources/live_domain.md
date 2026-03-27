@@ -3,12 +3,15 @@
 page_title: "alicloudextend_live_domain Resource - alicloudextend"
 subcategory: ""
 description: |-
-  Manages an ApsaraVideo Live domain (ingest or streaming). Before creating this resource, add the TXT record returned by the alicloudextend_live_domain_verify_content data source to your DNS and ensure domain ownership verification passes.
+  Manages an ApsaraVideo Live domain (ingest or streaming). Aligns with the official alicloud_live_domain resource and extends it by waiting for the domain to reach 'online' status so that the CNAME value is available for use in downstream resources.
+  Before creating, add the DNS TXT record from alicloudextend_live_domain_verify_content to prove domain ownership.
 ---
 
 # alicloudextend_live_domain (Resource)
 
-Manages an ApsaraVideo Live domain (ingest or streaming). Before creating this resource, add the TXT record returned by the `alicloudextend_live_domain_verify_content` data source to your DNS and ensure domain ownership verification passes.
+Manages an ApsaraVideo Live domain (ingest or streaming). Aligns with the official alicloud_live_domain resource and extends it by waiting for the domain to reach 'online' status so that the CNAME value is available for use in downstream resources.
+
+Before creating, add the DNS TXT record from `alicloudextend_live_domain_verify_content` to prove domain ownership.
 
 ## Example Usage
 
@@ -22,27 +25,38 @@ data "alicloudextend_live_domain_verify_content" "streaming" {
   domain_name = "play.example.com"
 }
 
-# Step 2: Create DNS TXT records using your DNS provider, e.g.:
+# Step 2: Create DNS TXT records using your DNS provider:
 #   _dnsauth.push.example.com  TXT  <data.alicloudextend_live_domain_verify_content.ingest.content>
 #   _dnsauth.play.example.com  TXT  <data.alicloudextend_live_domain_verify_content.streaming.content>
-# Then apply this configuration after the TXT records have propagated.
+# Apply this configuration after TXT records have propagated.
 
 # Ingest (push) domain
 resource "alicloudextend_live_domain" "ingest" {
-  domain_name      = "push.example.com"
-  live_domain_type = "liveEdge"
-  region           = "cn-shanghai"
-  scope            = "domestic"
+  domain_name = "push.example.com"
+  domain_type = "liveEdge"
+  region      = "cn-shanghai"
+  scope       = "domestic"
+  status      = "online"
+
+  tags = {
+    env = "production"
+  }
 }
 
 # Streaming (play) domain
 resource "alicloudextend_live_domain" "streaming" {
-  domain_name      = "play.example.com"
-  live_domain_type = "liveVideo"
-  region           = "cn-shanghai"
-  scope            = "domestic"
+  domain_name = "play.example.com"
+  domain_type = "liveVideo"
+  region      = "cn-shanghai"
+  scope       = "domestic"
+  status      = "online"
+
+  tags = {
+    env = "production"
+  }
 }
 
+# Step 3: Use the CNAME to create DNS records pointing to AliCloud CDN.
 output "ingest_cname" {
   value       = alicloudextend_live_domain.ingest.cname
   description = "Point push.example.com CNAME to this value."
@@ -60,17 +74,18 @@ output "streaming_cname" {
 ### Required
 
 - `domain_name` (String) The live domain name (e.g. live.example.com).
-- `live_domain_type` (String) The type of live domain. Valid values: liveVideo (streaming domain), liveEdge (ingest domain).
-- `region` (String) The region where the domain resides (e.g. cn-shanghai, ap-southeast-1).
+- `domain_type` (String) The domain business type. Valid values: liveVideo (streaming domain), liveEdge (ingest domain).
+- `region` (String) The region to which the domain belongs (e.g. cn-shanghai, ap-southeast-1).
 
 ### Optional
 
-- `check_url` (String) The URL used for health checks (e.g. http://live.example.com/status.html).
-- `scope` (String) The acceleration region. Valid values: domestic, overseas, global. Defaults to domestic.
-- `top_level_domain` (String) The top-level domain name.
+- `check_url` (String) The URL used for health checks. Immutable after creation.
+- `resource_group_id` (String) The resource group ID.
+- `scope` (String) The acceleration region. Valid values: domestic, overseas, global.
+- `status` (String) The domain operational state. Valid values: online, offline.
+- `tags` (Map of String) Key-value pairs for resource labeling.
 
 ### Read-Only
 
-- `cname` (String) The CNAME assigned to the domain. Point your domain's CNAME record to this value.
-- `domain_status` (String) The domain status (online, offline, configuring).
-- `gmt_created` (String) The time when the domain was created (ISO 8601 UTC).
+- `cname` (String) The CNAME assigned by AliCloud. Point your domain's DNS CNAME record to this value. Available once the domain reaches 'online' status.
+- `create_time` (String) The time when the domain was created (ISO 8601 UTC).

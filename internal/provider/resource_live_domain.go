@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strings"
+	"time"
 
 	openapiutil "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	liveclient "github.com/alibabacloud-go/live-20161101/v2/client"
@@ -27,16 +28,20 @@ func NewLiveDomainResource() resource.Resource {
 }
 
 type LiveDomainModel struct {
-	DomainName     types.String `tfsdk:"domain_name"`
-	LiveDomainType types.String `tfsdk:"live_domain_type"`
-	Region         types.String `tfsdk:"region"`
-	Scope          types.String `tfsdk:"scope"`
-	CheckUrl       types.String `tfsdk:"check_url"`
-	TopLevelDomain types.String `tfsdk:"top_level_domain"`
+	// Required / ForceNew
+	DomainName  types.String `tfsdk:"domain_name"`
+	DomainType  types.String `tfsdk:"domain_type"`
+	Region      types.String `tfsdk:"region"`
+	// Optional ForceNew
+	CheckUrl        types.String `tfsdk:"check_url"`
+	ResourceGroupId types.String `tfsdk:"resource_group_id"`
+	Scope           types.String `tfsdk:"scope"`
+	// Optional mutable
+	Status types.String            `tfsdk:"status"`
+	Tags   map[string]types.String `tfsdk:"tags"`
 	// Computed
-	Cname        types.String `tfsdk:"cname"`
-	DomainStatus types.String `tfsdk:"domain_status"`
-	GmtCreated   types.String `tfsdk:"gmt_created"`
+	Cname      types.String `tfsdk:"cname"`
+	CreateTime types.String `tfsdk:"create_time"`
 }
 
 func (r *LiveDomainResource) Metadata(_ context.Context, req resource.MetadataRequest, resp *resource.MetadataResponse) {
@@ -47,50 +52,59 @@ func (r *LiveDomainResource) Schema(_ context.Context, _ resource.SchemaRequest,
 	forceNew := []planmodifier.String{stringplanmodifier.RequiresReplace()}
 
 	resp.Schema = schema.Schema{
-		Description: "Manages an ApsaraVideo Live domain (ingest or streaming). " +
-			"Before creating this resource, add the TXT record returned by the " +
-			"`alicloudextend_live_domain_verify_content` data source to your DNS and ensure " +
-			"domain ownership verification passes.",
+		Description: "Manages an ApsaraVideo Live domain (ingest or streaming). Aligns with the " +
+			"official alicloud_live_domain resource and extends it by waiting for the domain to " +
+			"reach 'online' status so that the CNAME value is available for use in downstream resources.\n\n" +
+			"Before creating, add the DNS TXT record from `alicloudextend_live_domain_verify_content` " +
+			"to prove domain ownership.",
 		Attributes: map[string]schema.Attribute{
 			"domain_name": schema.StringAttribute{
 				Required:      true,
 				Description:   "The live domain name (e.g. live.example.com).",
 				PlanModifiers: forceNew,
 			},
-			"live_domain_type": schema.StringAttribute{
+			"domain_type": schema.StringAttribute{
 				Required:      true,
-				Description:   "The type of live domain. Valid values: liveVideo (streaming domain), liveEdge (ingest domain).",
+				Description:   "The domain business type. Valid values: liveVideo (streaming domain), liveEdge (ingest domain).",
 				PlanModifiers: forceNew,
 			},
 			"region": schema.StringAttribute{
 				Required:      true,
-				Description:   "The region where the domain resides (e.g. cn-shanghai, ap-southeast-1).",
+				Description:   "The region to which the domain belongs (e.g. cn-shanghai, ap-southeast-1).",
+				PlanModifiers: forceNew,
+			},
+			"check_url": schema.StringAttribute{
+				Optional:      true,
+				Description:   "The URL used for health checks. Immutable after creation.",
+				PlanModifiers: forceNew,
+			},
+			"resource_group_id": schema.StringAttribute{
+				Optional:      true,
+				Description:   "The resource group ID.",
 				PlanModifiers: forceNew,
 			},
 			"scope": schema.StringAttribute{
 				Optional:      true,
-				Description:   "The acceleration region. Valid values: domestic, overseas, global. Defaults to domestic.",
+				Description:   "The acceleration region. Valid values: domestic, overseas, global.",
 				PlanModifiers: forceNew,
 			},
-			"check_url": schema.StringAttribute{
+			"status": schema.StringAttribute{
 				Optional:    true,
-				Description: "The URL used for health checks (e.g. http://live.example.com/status.html).",
+				Computed:    true,
+				Description: "The domain operational state. Valid values: online, offline.",
 			},
-			"top_level_domain": schema.StringAttribute{
-				Optional:      true,
-				Description:   "The top-level domain name.",
-				PlanModifiers: forceNew,
+			"tags": schema.MapAttribute{
+				Optional:    true,
+				ElementType: types.StringType,
+				Description: "Key-value pairs for resource labeling.",
 			},
-			// Computed
+			// Extension: official provider does not return this
 			"cname": schema.StringAttribute{
 				Computed:    true,
-				Description: "The CNAME assigned to the domain. Point your domain's CNAME record to this value.",
+				Description: "The CNAME assigned by AliCloud. Point your domain's DNS CNAME record to this value. " +
+					"Available once the domain reaches 'online' status.",
 			},
-			"domain_status": schema.StringAttribute{
-				Computed:    true,
-				Description: "The domain status (online, offline, configuring).",
-			},
-			"gmt_created": schema.StringAttribute{
+			"create_time": schema.StringAttribute{
 				Computed:    true,
 				Description: "The time when the domain was created (ISO 8601 UTC).",
 			},
@@ -133,11 +147,10 @@ func (r *LiveDomainResource) Create(ctx context.Context, req resource.CreateRequ
 
 	domainName := plan.DomainName.ValueString()
 
-	// Step 1: Verify domain ownership via DNS TXT record.
-	verifyType := "dnsCheck"
+	// Verify domain ownership via DNS TXT record.
 	_, err = live.VerifyLiveDomainOwner(&liveclient.VerifyLiveDomainOwnerRequest{
 		DomainName: strPtr(domainName),
-		VerifyType: strPtr(verifyType),
+		VerifyType: strPtr("dnsCheck"),
 	})
 	if err != nil {
 		resp.Diagnostics.AddError(
@@ -147,10 +160,10 @@ func (r *LiveDomainResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	// Step 2: Add the live domain.
+	// Add the live domain.
 	addReq := &liveclient.AddLiveDomainRequest{
 		DomainName:     strPtr(domainName),
-		LiveDomainType: strPtr(plan.LiveDomainType.ValueString()),
+		LiveDomainType: strPtr(plan.DomainType.ValueString()),
 		Region:         strPtr(plan.Region.ValueString()),
 	}
 	if !plan.Scope.IsNull() && !plan.Scope.IsUnknown() {
@@ -159,8 +172,19 @@ func (r *LiveDomainResource) Create(ctx context.Context, req resource.CreateRequ
 	if !plan.CheckUrl.IsNull() && !plan.CheckUrl.IsUnknown() {
 		addReq.CheckUrl = strPtr(plan.CheckUrl.ValueString())
 	}
-	if !plan.TopLevelDomain.IsNull() && !plan.TopLevelDomain.IsUnknown() {
-		addReq.TopLevelDomain = strPtr(plan.TopLevelDomain.ValueString())
+	if !plan.ResourceGroupId.IsNull() && !plan.ResourceGroupId.IsUnknown() {
+		addReq.ResourceGroupId = strPtr(plan.ResourceGroupId.ValueString())
+	}
+	if len(plan.Tags) > 0 {
+		tags := make([]*liveclient.AddLiveDomainRequestTag, 0, len(plan.Tags))
+		for k, v := range plan.Tags {
+			k, v := k, v
+			tags = append(tags, &liveclient.AddLiveDomainRequestTag{
+				Key:   strPtr(k),
+				Value: strPtr(v.ValueString()),
+			})
+		}
+		addReq.Tag = tags
 	}
 
 	_, err = live.AddLiveDomain(addReq)
@@ -169,10 +193,19 @@ func (r *LiveDomainResource) Create(ctx context.Context, req resource.CreateRequ
 		return
 	}
 
-	// Step 3: Read back to populate computed fields.
-	r.readIntoModel(ctx, live, domainName, &plan, &resp.Diagnostics)
+	// Poll until online and CNAME is available (our extension).
+	r.waitForOnlineAndPopulate(ctx, live, domainName, &plan, &resp.Diagnostics)
 	if resp.Diagnostics.HasError() {
 		return
+	}
+
+	// Handle explicit offline request after creation.
+	if !plan.Status.IsNull() && !plan.Status.IsUnknown() && plan.Status.ValueString() == "offline" {
+		if _, err := live.StopLiveDomain(&liveclient.StopLiveDomainRequest{DomainName: strPtr(domainName)}); err != nil {
+			resp.Diagnostics.AddError(fmt.Sprintf("Failed to stop live domain %q", domainName), err.Error())
+			return
+		}
+		plan.Status = types.StringValue("offline")
 	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
@@ -203,7 +236,6 @@ func (r *LiveDomainResource) Read(ctx context.Context, req resource.ReadRequest,
 		resp.Diagnostics.AddError(fmt.Sprintf("Failed to describe live domain %q", domainName), err.Error())
 		return
 	}
-
 	if detail.Body == nil || detail.Body.DomainDetail == nil {
 		resp.State.RemoveResource(ctx)
 		return
@@ -214,13 +246,13 @@ func (r *LiveDomainResource) Read(ctx context.Context, req resource.ReadRequest,
 		state.Cname = types.StringValue(*d.Cname)
 	}
 	if d.DomainStatus != nil {
-		state.DomainStatus = types.StringValue(*d.DomainStatus)
+		state.Status = types.StringValue(*d.DomainStatus)
 	}
 	if d.GmtCreated != nil {
-		state.GmtCreated = types.StringValue(*d.GmtCreated)
+		state.CreateTime = types.StringValue(*d.GmtCreated)
 	}
 	if d.LiveDomainType != nil {
-		state.LiveDomainType = types.StringValue(*d.LiveDomainType)
+		state.DomainType = types.StringValue(*d.LiveDomainType)
 	}
 	if d.Region != nil {
 		state.Region = types.StringValue(*d.Region)
@@ -228,30 +260,73 @@ func (r *LiveDomainResource) Read(ctx context.Context, req resource.ReadRequest,
 	if d.Scope != nil {
 		state.Scope = types.StringValue(*d.Scope)
 	}
+	if d.ResourceGroupId != nil {
+		state.ResourceGroupId = types.StringValue(*d.ResourceGroupId)
+	}
+
+	// Read tags.
+	tagResp, err := live.ListLiveTagResources(&liveclient.ListLiveTagResourcesRequest{
+		ResourceType: strPtr("DOMAIN"),
+		ResourceId:   []*string{strPtr(domainName)},
+	})
+	if err == nil && tagResp.Body != nil && tagResp.Body.TagResources != nil {
+		tags := make(map[string]types.String)
+		for _, tr := range tagResp.Body.TagResources.TagResource {
+			if tr.TagKey != nil && tr.TagValue != nil {
+				tags[*tr.TagKey] = types.StringValue(*tr.TagValue)
+			}
+		}
+		if len(tags) > 0 {
+			state.Tags = tags
+		}
+	}
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
 func (r *LiveDomainResource) Update(ctx context.Context, req resource.UpdateRequest, resp *resource.UpdateResponse) {
-	// All mutable fields (check_url) do not have a dedicated update API in ApsaraVideo Live;
-	// the domain must be deleted and recreated. ForceNew handles immutable fields.
-	// For check_url changes, we simply reflect the new plan value in state since it is
-	// only used at creation time.
-	var plan LiveDomainModel
+	var plan, state LiveDomainModel
 	resp.Diagnostics.Append(req.Plan.Get(ctx, &plan)...)
-	if resp.Diagnostics.HasError() {
-		return
-	}
-	var state LiveDomainModel
 	resp.Diagnostics.Append(req.State.Get(ctx, &state)...)
 	if resp.Diagnostics.HasError() {
 		return
 	}
 
+	live, err := r.newLiveClient()
+	if err != nil {
+		resp.Diagnostics.AddError("Failed to create Live client", err.Error())
+		return
+	}
+
+	domainName := state.DomainName.ValueString()
+
+	// Update status if changed.
+	planStatus := plan.Status.ValueString()
+	stateStatus := state.Status.ValueString()
+	if planStatus != stateStatus && planStatus != "" {
+		switch planStatus {
+		case "online":
+			if _, err := live.StartLiveDomain(&liveclient.StartLiveDomainRequest{DomainName: strPtr(domainName)}); err != nil {
+				resp.Diagnostics.AddError(fmt.Sprintf("Failed to start live domain %q", domainName), err.Error())
+				return
+			}
+		case "offline":
+			if _, err := live.StopLiveDomain(&liveclient.StopLiveDomainRequest{DomainName: strPtr(domainName)}); err != nil {
+				resp.Diagnostics.AddError(fmt.Sprintf("Failed to stop live domain %q", domainName), err.Error())
+				return
+			}
+		}
+	}
+
+	// Update tags: remove stale keys, add/update new ones.
+	if err := r.reconcileTags(live, domainName, state.Tags, plan.Tags); err != nil {
+		resp.Diagnostics.AddError(fmt.Sprintf("Failed to update tags for live domain %q", domainName), err.Error())
+		return
+	}
+
 	// Carry computed fields forward.
 	plan.Cname = state.Cname
-	plan.DomainStatus = state.DomainStatus
-	plan.GmtCreated = state.GmtCreated
+	plan.CreateTime = state.CreateTime
 
 	resp.Diagnostics.Append(resp.State.Set(ctx, &plan)...)
 }
@@ -282,31 +357,98 @@ func (r *LiveDomainResource) ImportState(ctx context.Context, req resource.Impor
 	resource.ImportStatePassthroughID(ctx, path.Root("domain_name"), req, resp)
 }
 
-// readIntoModel populates computed fields from DescribeLiveDomainDetail into model.
-func (r *LiveDomainResource) readIntoModel(ctx context.Context, live *liveclient.Client, domainName string, m *LiveDomainModel, diags interface {
+// waitForOnlineAndPopulate polls until domain_status == "online" and CNAME is set (max 10 min).
+func (r *LiveDomainResource) waitForOnlineAndPopulate(ctx context.Context, live *liveclient.Client, domainName string, m *LiveDomainModel, diags interface {
 	AddError(summary, detail string)
 	HasError() bool
 }) {
-	detail, err := live.DescribeLiveDomainDetail(&liveclient.DescribeLiveDomainDetailRequest{
-		DomainName: strPtr(domainName),
-	})
-	if err != nil {
-		diags.AddError(fmt.Sprintf("Failed to describe live domain %q after creation", domainName), err.Error())
-		return
+	const timeout = 10 * time.Minute
+	const interval = 10 * time.Second
+	deadline := time.Now().Add(timeout)
+
+	for {
+		detail, err := live.DescribeLiveDomainDetail(&liveclient.DescribeLiveDomainDetailRequest{
+			DomainName: strPtr(domainName),
+		})
+		if err != nil {
+			diags.AddError(fmt.Sprintf("Failed to describe live domain %q", domainName), err.Error())
+			return
+		}
+		if detail.Body != nil && detail.Body.DomainDetail != nil {
+			d := detail.Body.DomainDetail
+			status := ""
+			if d.DomainStatus != nil {
+				status = *d.DomainStatus
+			}
+			if status == "online" && d.Cname != nil && *d.Cname != "" {
+				m.Cname = types.StringValue(*d.Cname)
+				m.Status = types.StringValue(status)
+				if d.GmtCreated != nil {
+					m.CreateTime = types.StringValue(*d.GmtCreated)
+				}
+				return
+			}
+		}
+
+		if time.Now().After(deadline) {
+			diags.AddError(
+				fmt.Sprintf("Timed out waiting for live domain %q to become online", domainName),
+				"Domain did not reach 'online' status within 10 minutes. "+
+					"Run `terraform refresh` once the domain is active.",
+			)
+			return
+		}
+
+		select {
+		case <-ctx.Done():
+			diags.AddError("Context cancelled", ctx.Err().Error())
+			return
+		case <-time.After(interval):
+		}
 	}
-	if detail.Body == nil || detail.Body.DomainDetail == nil {
-		return
+}
+
+// reconcileTags removes tags no longer in plan and adds/updates tags in plan.
+func (r *LiveDomainResource) reconcileTags(live *liveclient.Client, domainName string, oldTags, newTags map[string]types.String) error {
+	resourceType := "DOMAIN"
+
+	// Keys to remove.
+	var removeKeys []*string
+	for k := range oldTags {
+		if _, ok := newTags[k]; !ok {
+			k := k
+			removeKeys = append(removeKeys, strPtr(k))
+		}
 	}
-	d := detail.Body.DomainDetail
-	if d.Cname != nil {
-		m.Cname = types.StringValue(*d.Cname)
+	if len(removeKeys) > 0 {
+		if _, err := live.UnTagLiveResources(&liveclient.UnTagLiveResourcesRequest{
+			ResourceType: strPtr(resourceType),
+			ResourceId:   []*string{strPtr(domainName)},
+			TagKey:       removeKeys,
+		}); err != nil {
+			return err
+		}
 	}
-	if d.DomainStatus != nil {
-		m.DomainStatus = types.StringValue(*d.DomainStatus)
+
+	// Tags to add/update.
+	var addTags []*liveclient.TagLiveResourcesRequestTag
+	for k, v := range newTags {
+		k, v := k, v
+		addTags = append(addTags, &liveclient.TagLiveResourcesRequestTag{
+			Key:   strPtr(k),
+			Value: strPtr(v.ValueString()),
+		})
 	}
-	if d.GmtCreated != nil {
-		m.GmtCreated = types.StringValue(*d.GmtCreated)
+	if len(addTags) > 0 {
+		if _, err := live.TagLiveResources(&liveclient.TagLiveResourcesRequest{
+			ResourceType: strPtr(resourceType),
+			ResourceId:   []*string{strPtr(domainName)},
+			Tag:          addTags,
+		}); err != nil {
+			return err
+		}
 	}
+	return nil
 }
 
 // isLiveNotFound returns true when the error indicates the domain does not exist.
