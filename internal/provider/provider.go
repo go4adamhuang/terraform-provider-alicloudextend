@@ -127,6 +127,10 @@ func (p *AliCloudProvider) Resources(_ context.Context) []func() resource.Resour
 	return []func() resource.Resource{
 		NewEsaHttpsBasicConfigurationResource,
 		NewLiveDomainResource,
+		NewLiveDomainCertificateResource,
+		NewLiveDomainHttpHeaderResource,
+		NewLiveDomainAccessControlResource,
+		NewLiveDomainIpv6Resource,
 	}
 }
 

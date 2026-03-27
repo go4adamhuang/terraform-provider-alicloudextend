@@ -1,0 +1,24 @@
+---
+page_title: "{{.Type}} {{.Name}} - {{.ProviderName}}"
+subcategory: "ApsaraVideo Live"
+description: |-
+  {{.Description}}
+---
+
+# {{.Name}} ({{.Type}})
+
+{{.Description}}
+
+## Example Usage
+
+{{tffile "examples/resources/alicloudextend_live_domain_http_header/resource.tf"}}
+
+{{.SchemaMarkdown}}
+
+## Import
+
+Import is supported using `<domain_name>:<header_key>`:
+
+```shell
+terraform import alicloudextend_live_domain_http_header.cors play.example.com:Access-Control-Allow-Origin
+```

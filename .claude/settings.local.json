@@ -17,7 +17,12 @@
       "WebSearch",
       "WebFetch(domain:api.aliyun.com)",
       "WebFetch(domain:www.alibabacloud.com)",
-      "Bash(make tidy:*)"
+      "Bash(make tidy:*)",
+      "WebFetch(domain:help.aliyun.com)",
+      "Bash(sed -i '' 's/func \\(r \\\\*LiveDomainAccessControlResource\\) Delete\\(_ context.Context,/func \\(r *LiveDomainAccessControlResource\\) Delete\\(ctx context.Context,/' /Users/adam.huang/personal/terraform-provider-alicloudextend/internal/provider/resource_live_domain_access_control.go)",
+      "Bash(sed -i '' 's/func \\(r \\\\*LiveDomainCertificateResource\\) Delete\\(_ context.Context,/func \\(r *LiveDomainCertificateResource\\) Delete\\(ctx context.Context,/' /Users/adam.huang/personal/terraform-provider-alicloudextend/internal/provider/resource_live_domain_certificate.go)",
+      "Bash(sed -i '' 's/func \\(r \\\\*LiveDomainHttpHeaderResource\\) Delete\\(_ context.Context,/func \\(r *LiveDomainHttpHeaderResource\\) Delete\\(ctx context.Context,/' /Users/adam.huang/personal/terraform-provider-alicloudextend/internal/provider/resource_live_domain_http_header.go)",
+      "Bash(sed -i '' 's/func \\(r \\\\*LiveDomainIpv6Resource\\) Delete\\(_ context.Context,/func \\(r *LiveDomainIpv6Resource\\) Delete\\(ctx context.Context,/' /Users/adam.huang/personal/terraform-provider-alicloudextend/internal/provider/resource_live_domain_ipv6.go)"
     ]
   }
 }
