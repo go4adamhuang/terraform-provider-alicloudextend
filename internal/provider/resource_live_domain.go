@@ -350,7 +350,11 @@ func (r *LiveDomainResource) Delete(ctx context.Context, req resource.DeleteRequ
 	})
 	if err != nil && !isLiveNotFound(err) {
 		resp.Diagnostics.AddError(fmt.Sprintf("Failed to delete live domain %q", domainName), err.Error())
+		return
 	}
+
+	// Wait until the domain is fully removed to prevent DomainAlreadyExist on rapid recreate.
+	r.waitForDeleted(ctx, live, domainName, &resp.Diagnostics)
 }
 
 func (r *LiveDomainResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -449,6 +453,38 @@ func (r *LiveDomainResource) reconcileTags(live *liveclient.Client, domainName s
 		}
 	}
 	return nil
+}
+
+// waitForDeleted polls until DescribeLiveDomainDetail returns NotFound (max 5 min).
+func (r *LiveDomainResource) waitForDeleted(ctx context.Context, live *liveclient.Client, domainName string, diags interface {
+	AddError(summary, detail string)
+}) {
+	const timeout = 5 * time.Minute
+	const interval = 5 * time.Second
+	deadline := time.Now().Add(timeout)
+
+	for {
+		_, err := live.DescribeLiveDomainDetail(&liveclient.DescribeLiveDomainDetailRequest{
+			DomainName: strPtr(domainName),
+		})
+		if err != nil && isLiveNotFound(err) {
+			return
+		}
+
+		if time.Now().After(deadline) {
+			diags.AddError(
+				fmt.Sprintf("Timed out waiting for live domain %q to be deleted", domainName),
+				"Domain did not disappear within 5 minutes.",
+			)
+			return
+		}
+
+		select {
+		case <-ctx.Done():
+			return
+		case <-time.After(interval):
+		}
+	}
 }
 
 // isLiveNotFound returns true when the error indicates the domain does not exist.
