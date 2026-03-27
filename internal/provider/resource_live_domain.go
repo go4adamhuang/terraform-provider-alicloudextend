@@ -79,9 +79,9 @@ func (r *LiveDomainResource) Schema(_ context.Context, _ resource.SchemaRequest,
 				PlanModifiers: forceNew,
 			},
 			"resource_group_id": schema.StringAttribute{
-				Optional:      true,
-				Description:   "The resource group ID.",
-				PlanModifiers: forceNew,
+				Optional:    true,
+				Computed:    true,
+				Description: "The resource group ID.",
 			},
 			"scope": schema.StringAttribute{
 				Optional:      true,
@@ -188,7 +188,7 @@ func (r *LiveDomainResource) Create(ctx context.Context, req resource.CreateRequ
 	}
 
 	_, err = live.AddLiveDomain(addReq)
-	if err != nil {
+	if err != nil && !isLiveDomainAlreadyExist(err) {
 		resp.Diagnostics.AddError(fmt.Sprintf("Failed to add live domain %q", domainName), err.Error())
 		return
 	}
@@ -457,4 +457,9 @@ func isLiveNotFound(err error) bool {
 	return strings.Contains(msg, "InvalidDomain.NotFound") ||
 		strings.Contains(msg, "DomainNotFound") ||
 		strings.Contains(msg, "404")
+}
+
+// isLiveDomainAlreadyExist returns true when the domain already exists.
+func isLiveDomainAlreadyExist(err error) bool {
+	return strings.Contains(err.Error(), "DomainAlreadyExist")
 }
