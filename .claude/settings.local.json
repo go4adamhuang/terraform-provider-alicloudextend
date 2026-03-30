@@ -23,7 +23,8 @@
       "Bash(sed -i '' 's/func \\(r \\\\*LiveDomainCertificateResource\\) Delete\\(_ context.Context,/func \\(r *LiveDomainCertificateResource\\) Delete\\(ctx context.Context,/' /Users/adam.huang/personal/terraform-provider-alicloudextend/internal/provider/resource_live_domain_certificate.go)",
       "Bash(sed -i '' 's/func \\(r \\\\*LiveDomainHttpHeaderResource\\) Delete\\(_ context.Context,/func \\(r *LiveDomainHttpHeaderResource\\) Delete\\(ctx context.Context,/' /Users/adam.huang/personal/terraform-provider-alicloudextend/internal/provider/resource_live_domain_http_header.go)",
       "Bash(sed -i '' 's/func \\(r \\\\*LiveDomainIpv6Resource\\) Delete\\(_ context.Context,/func \\(r *LiveDomainIpv6Resource\\) Delete\\(ctx context.Context,/' /Users/adam.huang/personal/terraform-provider-alicloudextend/internal/provider/resource_live_domain_ipv6.go)",
-      "Bash(xargs sed:*)"
+      "Bash(xargs sed:*)",
+      "Bash(grep -r \"live_forbid\\\\|alilive\" /Users/adam.huang/go/pkg/mod/github.com/alibabacloud-go/live-20161101/v2@v2.7.1/ --include=*.go)"
     ]
   }
 }

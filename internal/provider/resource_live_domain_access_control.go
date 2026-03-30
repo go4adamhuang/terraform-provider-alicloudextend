@@ -167,6 +167,7 @@ func applyAccessControl(live *liveclient.Client, m *LiveDomainAccessControlModel
 		hlsBlock = m.HlsBlock.ValueString()
 	}
 	return batchSetConfig(live, m.DomainName.ValueString(), "alilive", map[string]string{
+		"enable":           "on",
 		"live_forbid_rtmp": rtmpBlock,
 		"live_forbid_hls":  hlsBlock,
 	})

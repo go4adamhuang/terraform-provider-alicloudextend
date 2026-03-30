@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 
 	openapiutil "github.com/alibabacloud-go/darabonba-openapi/v2/client"
 	liveclient "github.com/alibabacloud-go/live-20161101/v2/client"
@@ -35,6 +36,8 @@ type liveFunctionEntry struct {
 }
 
 // batchSetConfig calls BatchSetLiveDomainConfigs for a single function.
+// It retries up to 3 times on transient errors (e.g. InvalidStartEndTimeParameter)
+// that can occur when the domain has just become online.
 func batchSetConfig(live *liveclient.Client, domainName, functionName string, args map[string]string) error {
 	fnArgs := make([]liveFunctionArg, 0, len(args))
 	for k, v := range args {
@@ -45,10 +48,23 @@ func batchSetConfig(live *liveclient.Client, domainName, functionName string, ar
 	if err != nil {
 		return fmt.Errorf("marshal functions JSON: %w", err)
 	}
-	_, err = live.BatchSetLiveDomainConfigs(&liveclient.BatchSetLiveDomainConfigsRequest{
-		DomainNames: strPtr(domainName),
-		Functions:   strPtr(string(b)),
-	})
+
+	const maxRetries = 3
+	const retryInterval = 10 * time.Second
+	for i := range maxRetries {
+		_, err = live.BatchSetLiveDomainConfigs(&liveclient.BatchSetLiveDomainConfigsRequest{
+			DomainNames: strPtr(domainName),
+			Functions:   strPtr(string(b)),
+		})
+		if err == nil {
+			return nil
+		}
+		if strings.Contains(err.Error(), "InvalidStartEndTimeParameter") && i < maxRetries-1 {
+			time.Sleep(retryInterval)
+			continue
+		}
+		return err
+	}
 	return err
 }
 
