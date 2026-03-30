@@ -4,5 +4,11 @@ resource "alicloudextend_live_domain_certificate" "example" {
   cert_type    = "upload"
   ssl_pub      = file("path/to/cert.pem")
   ssl_pri      = file("path/to/key.pem")
-  cert_name    = "my-live-cert"
+}
+
+resource "alicloudextend_live_domain_https_option" "example" {
+  domain_name = "play.example.com"
+  http2       = "on"
+
+  depends_on = [alicloudextend_live_domain_certificate.example]
 }

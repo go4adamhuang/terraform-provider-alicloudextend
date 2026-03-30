@@ -2,12 +2,12 @@
 page_title: "Resource alicloudextend_live_domain_certificate - alicloudextend"
 subcategory: "ApsaraVideo Live"
 description: |-
-  Manages the HTTPS certificate and HTTP/2 configuration for an ApsaraVideo Live domain.
+  Manages the HTTPS certificate for an ApsaraVideo Live domain.
 ---
 
 # alicloudextend_live_domain_certificate
 
-Manages the HTTPS certificate and HTTP/2 configuration for an ApsaraVideo Live domain.
+Manages the HTTPS certificate for an ApsaraVideo Live domain.
 
 ## Example Usage
 
@@ -19,7 +19,6 @@ resource "alicloudextend_live_domain_certificate" "example" {
   ssl_pub      = file("path/to/cert.pem")
   ssl_pri      = file("path/to/key.pem")
   cert_name    = "my-live-cert"
-  http2        = "on"
 }
 ```
 
@@ -35,7 +34,6 @@ resource "alicloudextend_live_domain_certificate" "example" {
 
 - `cert_name` (String) The certificate name.
 - `cert_type` (String) The certificate type. Valid values: upload (custom certificate), cas (Certificate Management Service), free (free certificate).
-- `http2` (String) Whether to enable HTTP/2. Valid values: on, off. Only effective when ssl_protocol is on.
 - `ssl_pri` (String, Sensitive) The private key of the certificate (PEM format). Required when cert_type is upload.
 - `ssl_pub` (String, Sensitive) The public key of the certificate (PEM format). Required when cert_type is upload.
 

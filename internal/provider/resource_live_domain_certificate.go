@@ -30,7 +30,6 @@ type LiveDomainCertificateModel struct {
 	SSLPri      types.String `tfsdk:"ssl_pri"`
 	CertName    types.String `tfsdk:"cert_name"`
 	CertType    types.String `tfsdk:"cert_type"`
-	Http2       types.String `tfsdk:"http2"`
 	// Computed
 	CertDomainName types.String `tfsdk:"cert_domain_name"`
 	CertExpireTime types.String `tfsdk:"cert_expire_time"`
@@ -42,7 +41,7 @@ func (r *LiveDomainCertificateResource) Metadata(_ context.Context, req resource
 
 func (r *LiveDomainCertificateResource) Schema(_ context.Context, _ resource.SchemaRequest, resp *resource.SchemaResponse) {
 	resp.Schema = schema.Schema{
-		Description: "Manages the HTTPS certificate and HTTP/2 configuration for an ApsaraVideo Live domain.",
+		Description: "Manages the HTTPS certificate for an ApsaraVideo Live domain.",
 		Attributes: map[string]schema.Attribute{
 			"domain_name": schema.StringAttribute{
 				Required:    true,
@@ -73,11 +72,6 @@ func (r *LiveDomainCertificateResource) Schema(_ context.Context, _ resource.Sch
 			"cert_type": schema.StringAttribute{
 				Optional:    true,
 				Description: "The certificate type. Valid values: upload (custom certificate), cas (Certificate Management Service), free (free certificate).",
-			},
-			"http2": schema.StringAttribute{
-				Optional:    true,
-				Computed:    true,
-				Description: "Whether to enable HTTP/2. Valid values: on, off. Only effective when ssl_protocol is on.",
 			},
 			// Computed
 			"cert_domain_name": schema.StringAttribute{
@@ -198,8 +192,6 @@ func (r *LiveDomainCertificateResource) Delete(ctx context.Context, req resource
 		return
 	}
 
-	// Disable HTTP/2.
-	_ = batchDeleteConfig(live, domainName, "https_option")
 }
 
 func (r *LiveDomainCertificateResource) ImportState(ctx context.Context, req resource.ImportStateRequest, resp *resource.ImportStateResponse) {
@@ -225,19 +217,8 @@ func (r *LiveDomainCertificateResource) applyCertificate(live *liveclient.Client
 	if !m.CertType.IsNull() && !m.CertType.IsUnknown() {
 		certReq.CertType = strPtr(m.CertType.ValueString())
 	}
-	if _, err := live.SetLiveDomainCertificate(certReq); err != nil {
-		return err
-	}
-
-	// HTTP/2 is only meaningful when HTTPS is on.
-	if m.SSLProtocol.ValueString() == "on" && !m.Http2.IsNull() && !m.Http2.IsUnknown() {
-		if err := batchSetConfig(live, m.DomainName.ValueString(), "https_option", map[string]string{
-			"http2": m.Http2.ValueString(),
-		}); err != nil {
-			return fmt.Errorf("set http2: %w", err)
-		}
-	}
-	return nil
+	_, err := live.SetLiveDomainCertificate(certReq)
+	return err
 }
 
 // readIntoModel populates computed fields from the API.
@@ -275,15 +256,4 @@ func (r *LiveDomainCertificateResource) readIntoModel(live *liveclient.Client, m
 		}
 	}
 
-	// Read HTTP/2 setting.
-	args, err := describeFunctionArgs(live, domainName, "https_option")
-	if err != nil {
-		diags.AddError(fmt.Sprintf("Failed to describe https_option for domain %q", domainName), err.Error())
-		return
-	}
-	if args != nil {
-		if v, ok := args["http2"]; ok {
-			m.Http2 = types.StringValue(v)
-		}
-	}
 }
