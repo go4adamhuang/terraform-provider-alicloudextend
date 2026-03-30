@@ -69,11 +69,26 @@ func batchSetConfig(live *liveclient.Client, domainName, functionName string, ar
 }
 
 // batchDeleteConfig calls BatchDeleteLiveDomainConfigs for one or more function names.
+// It retries up to 3 times on InvalidStartEndTimeParameter, which AliCloud returns
+// when the domain is in a transient state during deletion.
 func batchDeleteConfig(live *liveclient.Client, domainName string, functionNames ...string) error {
-	_, err := live.BatchDeleteLiveDomainConfigs(&liveclient.BatchDeleteLiveDomainConfigsRequest{
-		DomainNames:   strPtr(domainName),
-		FunctionNames: strPtr(strings.Join(functionNames, ",")),
-	})
+	const maxRetries = 3
+	const retryInterval = 10 * time.Second
+	var err error
+	for i := range maxRetries {
+		_, err = live.BatchDeleteLiveDomainConfigs(&liveclient.BatchDeleteLiveDomainConfigsRequest{
+			DomainNames:   strPtr(domainName),
+			FunctionNames: strPtr(strings.Join(functionNames, ",")),
+		})
+		if err == nil {
+			return nil
+		}
+		if strings.Contains(err.Error(), "InvalidStartEndTimeParameter") && i < maxRetries-1 {
+			time.Sleep(retryInterval)
+			continue
+		}
+		return err
+	}
 	return err
 }
 
