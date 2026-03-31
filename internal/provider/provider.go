@@ -131,6 +131,7 @@ func (p *AliCloudProvider) Resources(_ context.Context) []func() resource.Resour
 		NewLiveDomainHttpsOptionResource,
 		NewLiveDomainHttpHeaderResource,
 		NewLiveDomainAccessControlResource,
+		NewLiveDomainUrlSigningResource,
 		NewLiveDomainIpv6Resource,
 		NewLiveDomainPlayMappingResource,
 	}
