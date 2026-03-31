@@ -102,7 +102,7 @@ func (r *LiveDomainPlayMappingResource) Read(ctx context.Context, req resource.R
 		return
 	}
 
-	rootDomain, err := describePullDomainForPlayDomain(live, state.SubDomain.ValueString())
+	exists, err := playMappingExists(live, state.RootDomain.ValueString(), state.SubDomain.ValueString())
 	if err != nil {
 		resp.Diagnostics.AddError(
 			fmt.Sprintf("Failed to read play mapping for domain %q", state.SubDomain.ValueString()),
@@ -110,13 +110,12 @@ func (r *LiveDomainPlayMappingResource) Read(ctx context.Context, req resource.R
 		)
 		return
 	}
-	if rootDomain == "" {
+	if !exists {
 		// Mapping no longer exists — remove from state.
 		resp.State.RemoveResource(ctx)
 		return
 	}
 
-	state.RootDomain = types.StringValue(rootDomain)
 	resp.Diagnostics.Append(resp.State.Set(ctx, &state)...)
 }
 
@@ -163,25 +162,25 @@ func (r *LiveDomainPlayMappingResource) ImportState(ctx context.Context, req res
 	resp.Diagnostics.Append(resp.State.SetAttribute(ctx, path.Root("root_domain"), parts[1])...)
 }
 
-// describePullDomainForPlayDomain queries DescribeLiveDomainMapping for the given play_domain
-// and returns the pull_domain it is bound to, or empty string if not found.
-func describePullDomainForPlayDomain(live *liveclient.Client, playDomain string) (string, error) {
+// playMappingExists queries DescribeLiveDomainMapping using the pull domain (root_domain)
+// and checks whether the given play domain (sub_domain) is listed as a mapped play domain.
+func playMappingExists(live *liveclient.Client, pullDomain, playDomain string) (bool, error) {
 	resp, err := live.DescribeLiveDomainMapping(&liveclient.DescribeLiveDomainMappingRequest{
-		DomainName: strPtr(playDomain),
+		DomainName: strPtr(pullDomain),
 	})
 	if err != nil {
 		if strings.Contains(err.Error(), "InvalidDomain.NotFound") {
-			return "", nil
+			return false, nil
 		}
-		return "", err
+		return false, err
 	}
 	if resp.Body == nil || resp.Body.LiveDomainModels == nil {
-		return "", nil
+		return false, nil
 	}
 	for _, m := range resp.Body.LiveDomainModels.LiveDomainModel {
-		if m.DomainName != nil && m.Type != nil && *m.Type == "pull" {
-			return *m.DomainName, nil
+		if m.DomainName != nil && *m.DomainName == playDomain {
+			return true, nil
 		}
 	}
-	return "", nil
+	return false, nil
 }
