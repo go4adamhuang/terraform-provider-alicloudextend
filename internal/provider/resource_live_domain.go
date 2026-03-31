@@ -390,6 +390,9 @@ func (r *LiveDomainResource) waitForOnlineAndPopulate(ctx context.Context, live 
 				if d.GmtCreated != nil {
 					m.CreateTime = types.StringValue(*d.GmtCreated)
 				}
+				if d.ResourceGroupId != nil {
+					m.ResourceGroupId = types.StringValue(*d.ResourceGroupId)
+				}
 				return
 			}
 		}
